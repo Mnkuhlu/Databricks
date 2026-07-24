@@ -1,4 +1,5 @@
 # databricks.yml — repo root
+
 bundle:
   name: medallion_pipeline
 
