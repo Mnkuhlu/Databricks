@@ -1,0 +1,106 @@
+# resources/medallion_pipeline_job.yml
+#
+# Full medallion pipeline for the repo.
+# Task graph:
+#   bronze_ingest       (Auto Loader: raw CSV -> workspace.bronze.bronze_sales_transactions)
+#        |
+#        v
+#   silver_transform    (cleans, dedupes, builds dim_customers / dim_products /
+#                        dim_stores / fact_transactions in workspace.silver)
+#        |
+#        +--> gold_customer  (RFM segmentation, cohort retention, churn risk)
+#        +--> gold_product   (brand performance, market basket analysis)
+#        +--> gold_sales     (sales gold aggregates)
+#
+# The three gold tasks all depend only on silver_transform and run in
+# parallel, since they read the same silver tables independently and don't
+# write to each other's outputs.
+#
+# Deploy: databricks bundle deploy -t dev
+# Run:    databricks bundle run -t dev medallion_pipeline_job
+
+resources:
+  jobs:
+    medallion_pipeline_job:
+      name: medallion_pipeline_job
+
+      tags:
+        domain: payments-gaming
+        layer: bronze-silver-gold
+        owner: muzi.mngadi
+        managed_by: databricks-asset-bundle
+
+      email_notifications:
+        on_failure:
+          - ${var.notification_email}
+        no_alert_for_skipped_runs: false
+
+      timeout_seconds: 3600
+      max_concurrent_runs: 1
+
+      schedule:
+        quartz_cron_expression: "0 0 3 * * ?"
+        timezone_id: Africa/Johannesburg
+        pause_status: PAUSED   # flip to UNPAUSED once you've validated a manual run
+
+      job_clusters:
+        - job_cluster_key: medallion_shared_cluster
+          new_cluster:
+            spark_version: 15.4.x-scala2.12
+            node_type_id: ${var.cluster_node_type}
+            autoscale:
+              min_workers: 2
+              max_workers: 6
+            spark_conf:
+              spark.databricks.delta.optimizeWrite.enabled: "true"
+              spark.databricks.delta.autoCompact.enabled: "true"
+            data_security_mode: SINGLE_USER
+            runtime_engine: PHOTON
+
+      tasks:
+        - task_key: bronze_ingest
+          job_cluster_key: medallion_shared_cluster
+          notebook_task:
+            notebook_path: ../src/bronze/ingest_bronze.ipynb
+          timeout_seconds: 1800
+          max_retries: 2
+          min_retry_interval_millis: 60000
+          retry_on_timeout: true
+
+        - task_key: silver_transform
+          job_cluster_key: medallion_shared_cluster
+          depends_on:
+            - task_key: bronze_ingest
+          notebook_task:
+            notebook_path: "../src/silver/Bronze to Silver Ingestion.ipynb"
+          timeout_seconds: 1800
+          max_retries: 2
+          min_retry_interval_millis: 60000
+          retry_on_timeout: true
+
+        - task_key: gold_customer
+          job_cluster_key: medallion_shared_cluster
+          depends_on:
+            - task_key: silver_transform
+          notebook_task:
+            notebook_path: "../src/gold/Customer-Silver To Gold.ipynb"
+          timeout_seconds: 1200
+          max_retries: 1
+
+        - task_key: gold_product
+          job_cluster_key: medallion_shared_cluster
+          depends_on:
+            - task_key: silver_transform
+          notebook_task:
+            notebook_path: "../src/gold/Product-Silver To Gold.ipynb"
+          timeout_seconds: 1200
+          max_retries: 1
+
+        - task_key: gold_sales
+          job_cluster_key: medallion_shared_cluster
+          depends_on:
+            - task_key: silver_transform
+          notebook_task:
+            notebook_path: "../src/gold/Sales-Silver To Gold.ipynb"
+          timeout_seconds: 1200
+          max_retries: 1
