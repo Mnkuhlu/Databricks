@@ -9,7 +9,9 @@ include:
 variables:
   notification_email:
     description: "Email for job failure notifications"
-
+  cluster_node_type:
+    description: "Node type for job clusters"
+    default: "Standard_DS3_v2"
 
 targets:
   dev:
@@ -30,6 +32,7 @@ targets:
 
       root_path: /Shared/.bundle/${bundle.name}/${bundle.target}
     variables:
+      notification_email: "data-alerts@yourcompany.com"
     run_as:
       service_principal_name: "<prod-service-principal-application-id>"
     permissions:
