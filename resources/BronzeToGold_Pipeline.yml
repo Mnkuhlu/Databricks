@@ -43,19 +43,7 @@ resources:
         timezone_id: Africa/Johannesburg
         pause_status: PAUSED   # flip to UNPAUSED once you've validated a manual run
 
-      job_clusters:
-        - job_cluster_key: medallion_shared_cluster
-          new_cluster:
-            spark_version: 15.4.x-scala2.12
-            node_type_id: ${var.cluster_node_type}
-            autoscale:
-              min_workers: 2
-              max_workers: 6
-            spark_conf:
-              spark.databricks.delta.optimizeWrite.enabled: "true"
-              spark.databricks.delta.autoCompact.enabled: "true"
-            data_security_mode: SINGLE_USER
-            runtime_engine: PHOTON
+      
 
       tasks:
         - task_key: bronze_ingest
