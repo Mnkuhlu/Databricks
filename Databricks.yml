@@ -1,0 +1,40 @@
+# databricks.yml — repo root
+
+bundle:
+  name: medallion_pipeline
+
+include:
+  - resources/*.yml
+
+variables:
+  notification_email:
+    description: "Email for job failure notifications"
+  cluster_node_type:
+    description: "Node type for job clusters"
+    default: "Standard_DS3_v2"
+
+targets:
+  dev:
+    default: true
+    mode: development
+    workspace:
+      host:  https://dbc-ddf3c565-4225.cloud.databricks.com
+
+    variables:
+      notification_email: "m.a.nkuhlu@gmail.com"
+    run_as:
+      user_name: "m.a.nkuhlu@gmail.com"
+
+  prod:
+    mode: production
+    workspace:
+      host:  https://dbc-ddf3c565-4225.cloud.databricks.com
+
+      root_path: /Shared/.bundle/${bundle.name}/${bundle.target}
+    variables:
+      notification_email: "data-alerts@yourcompany.com"
+    run_as:
+      service_principal_name: "<prod-service-principal-application-id>"
+    permissions:
+      - level: CAN_MANAGE
+        group_name: data-engineering
