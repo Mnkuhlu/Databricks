@@ -1,0 +1,16 @@
+# Runtime dependency — pinned to match Databricks Runtime 15.4 LTS (spark_version in resources/BronzeToGold_Pipeline.yml)
+pyspark==3.5.0
+
+# Delta Lake support for local development against Delta tables outside a Databricks cluster
+delta-spark==3.1.0
+
+# Databricks Connect — lets src/run_pipeline.py execute against a real workspace cluster from a local/CI environment
+databricks-connect==15.4.*
+
+# Testing
+pytest==8.3.2
+chispa==0.10.1          # PySpark DataFrame equality assertions for tests/test_*.py
+
+# Code quality (optional but expected in a production repo)
+black==24.8.0
+ruff==0.6.3
